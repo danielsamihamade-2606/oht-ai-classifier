@@ -2,7 +2,7 @@ import streamlit as st
 from fastai.learner import load_learner
 from fastai.vision.all import *
 
-learn = load_learner('oht_model.pkl')
+learn = load_learner('oht_model_2.pkl')
 
 st.title("OHT Failure Classifier")
 
