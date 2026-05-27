@@ -5,11 +5,16 @@ from torchvision import transforms
 from torchvision.models import squeezenet1_0
 from fastai.vision.learner import create_vision_model
 
+st.set_page_config(page_title="OHT Composite Failure Classifier", layout="centered")
+
 st.title("OHT Composite Failure Classifier")
+st.write("Upload an open-hole tension contour image or test one of the sample images.")
+
+MODEL_PATH = "oht_model_3.pth"   # your uploaded PyTorch model
 
 @st.cache_resource
 def load_model():
-    ckpt = torch.load("oht_model_2.pth", map_location="cpu")
+    ckpt = torch.load(MODEL_PATH, map_location="cpu")
     vocab = ckpt["vocab"]
 
     model = create_vision_model(
@@ -20,6 +25,7 @@ def load_model():
 
     model.load_state_dict(ckpt["model_state"])
     model.eval()
+
     return model, vocab
 
 model, vocab = load_model()
@@ -34,6 +40,8 @@ tfm = transforms.Compose([
 ])
 
 def predict_image(img):
+    st.image(img, caption="Selected image", use_container_width=True)
+
     x = tfm(img).unsqueeze(0)
 
     with torch.no_grad():
@@ -44,9 +52,12 @@ def predict_image(img):
     pred = vocab[pred_idx]
     conf = probs[pred_idx].item()
 
-    st.image(img, caption="Selected image", use_container_width=True)
     st.subheader(f"Prediction: {pred.upper()}")
     st.write(f"Confidence: {conf:.2%}")
+
+    st.write("Class probabilities:")
+    for label, prob in zip(vocab, probs):
+        st.write(f"- {label}: {prob.item():.2%}")
 
 st.markdown("### Try sample images")
 
@@ -54,23 +65,26 @@ col1, col2, col3 = st.columns(3)
 
 with col1:
     if st.button("Safe sample"):
-        img = Image.open("samples/safe.png").convert("RGB")
+        img = Image.open("safe.png").convert("RGB")
         predict_image(img)
 
 with col2:
     if st.button("Moderate sample"):
-        img = Image.open("samples/moderate.png").convert("RGB")
+        img = Image.open("moderate.png").convert("RGB")
         predict_image(img)
 
 with col3:
     if st.button("Failed sample"):
-        img = Image.open("samples/failed.png").convert("RGB")
+        img = Image.open("failed.png").convert("RGB")
         predict_image(img)
 
 st.markdown("---")
 st.markdown("### Or upload your own image")
 
-uploaded_file = st.file_uploader("Upload OHT contour image", type=["png", "jpg", "jpeg"])
+uploaded_file = st.file_uploader(
+    "Upload OHT contour image",
+    type=["png", "jpg", "jpeg"]
+)
 
 if uploaded_file is not None:
     img = Image.open(uploaded_file).convert("RGB")
